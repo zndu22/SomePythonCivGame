@@ -1,0 +1,66 @@
+import pygame
+from constants import *
+
+class Unit:
+    position = [0, 0]
+    moveDist = 2
+    validTiles = [grassColor]
+    image = unit
+    movedThisTurn = False
+    team = 0 # 0 is player's team
+    maxHealth = 10
+    health = maxHealth
+    attack = 2
+
+    def __init__(self, position, team = 0):
+        self.position = position
+        self.team = team
+
+    def __str__(self):
+        return f"{str(self.position)}"
+
+    def __repr__(self):
+        return f"{str(self.position)}"
+
+    def is_path_valid(self, target_pos, img):
+        x0, y0 = self.position
+        x1, y1 = target_pos
+        dx = abs(x1 - x0)
+        dy = abs(y1 - y0)
+        sx = 1 if x0 < x1 else -1
+        sy = 1 if y0 < y1 else -1
+        err = dx - dy
+
+        while (x0, y0) != (x1, y1):
+            if img.getpixel((x0, y0)) not in self.validTiles:
+                return False
+            e2 = err * 2
+            if e2 > -dy:
+                err -= dy
+                x0 += sx
+            if e2 < dx:
+                err += dx
+                y0 += sy
+        return img.getpixel((x1, y1)) in self.validTiles and not self.movedThisTurn
+
+class Ship(Unit):
+    moveDist = 3
+    validTiles = [waterColor]
+    image = ship
+    maxHealth = 20
+    health = maxHealth
+
+
+    def __init__(self, position, team = 0):
+        self.position = position
+        self.team = team
+        self.moveDist = 3
+
+    def __str__(self):
+        return f"Ship at {str(self.position)}"
+
+    def __repr__(self):
+        return f"Ship at {str(self.position)}"
+
+    def is_path_valid(self, target_pos, img):
+        return super().is_path_valid(target_pos, img)
