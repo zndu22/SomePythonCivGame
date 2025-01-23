@@ -15,3 +15,4 @@ redSquareThing = pygame.image.load("graphics/attackMarker.png")
 grassColor = (0, 255, 0)
 waterColor = (0, 0, 255)
 mountainColor = (180, 180, 180)
+teamColors = [(0, 0, 0), (255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255), (255, 255, 255)]
