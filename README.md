@@ -2,4 +2,4 @@ What eventually will be a Civ like game written in python because I'm already to
 
 (Pardon the programmer art)
 
-![Screenshot 2025-01-23 130426](https://github.com/user-attachments/assets/1efa8a7e-ef78-4a32-9203-3a341de14b11)
+![ezgif-7-6b77c60a81](https://github.com/user-attachments/assets/7b7d7f7a-6e2b-4c26-b499-843e2b51fb32)
