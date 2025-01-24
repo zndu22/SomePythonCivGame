@@ -4,6 +4,7 @@ import pygame
 from Unit import Unit, Ship
 from constants import *
 import random
+from testStuff.temp import points_within_distance
 
 # ------- setup ---------
 pygame.init()
@@ -21,7 +22,7 @@ units = []
 selectedTeam = 0 # ! temporary variable, replace with GUI eventually, please
 
 # ------ worldgen --------
-img = Image.new("RGB", (100,100), (0,0,255))
+img = Image.new("RGB", (60,60), (0,0,255))
 for y in range(img.height):
     for x in range(img.width):
         height = int((opensimplex.noise2(x/20, y/20) + 
@@ -63,7 +64,6 @@ while running:
                 screen.blit(mountain, (camPos[0] + x*20+1, camPos[1] + y*20+1))
             else:
                 screen.blit(water, (camPos[0] + x*20+1, camPos[1] + y*20+1))
-            
 
             if (selected >= 0 and abs(units[selected].position[0] - x) <= units[selected].moveDist 
                               and abs(units[selected].position[1] - y) <= units[selected].moveDist
@@ -139,23 +139,22 @@ while running:
                     for i in units:
                         # ! very temporary enemy AI, please replace with something better, eventually, please
                         if i.team != 0:
-                            for _ in range(i.moveDist):
-                                possible_moves = [(i.position[0] + dx, i.position[1] + dy) for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]]
-                                random.shuffle(possible_moves)
-                                for move in possible_moves:
-                                    if (0 <= move[0] < img.width and 0 <= move[1] < img.height and
-                                        img.getpixel(move) in i.validTiles
-                                        and not list(move) == i.position): # I don't actually know if this line does anything important
-                                        if any(unit.position == list(move) for unit in units):
-                                            target_unit = next((unit for unit in units if unit.position == list(move)), None)
-                                            if target_unit and i.team != target_unit.team:
-                                                target_unit.health -= i.attack
-                                                if target_unit.health <= 0:
-                                                    units.remove(target_unit)
-                                        else:
-                                            i.position = list(move)
-                                        i.movedThisTurn = True
-                                        break
+                            possible_moves = points_within_distance(i.position, i.moveDist)
+                            random.shuffle(possible_moves)
+                            for move in possible_moves:
+                                if (0 <= move[0] < img.width and 0 <= move[1] < img.height and
+                                    img.getpixel(move) in i.validTiles
+                                    and not list(move) == i.position): # I don't actually know if this line does anything important
+                                    if any(unit.position == list(move) for unit in units):
+                                        target_unit = next((unit for unit in units if unit.position == list(move)), None)
+                                        if target_unit and i.team != target_unit.team:
+                                            target_unit.health -= i.attack
+                                            if target_unit.health <= 0:
+                                                units.remove(target_unit)
+                                    else:
+                                        i.position = list(move)
+                                    i.movedThisTurn = True
+                                    break
                         else:
                             i.movedThisTurn = False if i.team == 0 else True
 
