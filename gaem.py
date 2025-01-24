@@ -21,7 +21,7 @@ units = []
 selectedTeam = 0 # ! temporary variable, replace with GUI eventually, please
 
 # ------ worldgen --------
-img = Image.new("RGB", (70,70), (0,0,255))
+img = Image.new("RGB", (100,100), (0,0,255))
 for y in range(img.height):
     for x in range(img.width):
         height = int((opensimplex.noise2(x/20, y/20) + 
@@ -56,6 +56,7 @@ while running:
             #     or img.getpixel((min(x+1, img.width-1), min(y+1, img.height-1))) == waterColor
             #     or img.getpixel((max(x-1, 0), max(y-1, 0))) == waterColor):
             #         pygame.draw.rect(screen, (255, 255, 255), (camPos[0] + x*20-1, camPos[1] + y*20-1, 22, 22))
+
             if img.getpixel((x, y)) == grassColor:
                 screen.blit(grass, (camPos[0] + x*20+1, camPos[1] + y*20+1))
             elif img.getpixel((x, y)) == mountainColor:
@@ -104,6 +105,7 @@ while running:
                 if target_unit and units[selected].team != target_unit.team:
                     target_unit.health -= units[selected].attack
                     if target_unit.health <= 0:
+                        selected -= 1 if selected > units.index(target_unit) else 0
                         units.remove(target_unit)
             else:
                 units[selected].position = cursorPos
@@ -124,8 +126,12 @@ while running:
     
     screen.blit(turnButton, (screen.get_width()-39, screen.get_height()-39))
 
-    screen.blit(cursorPressed if leftMouseDown or rightMouseDown else cursor, 
-                (camPos[0]%20 + cursorPosSS[0]*20+1, camPos[1]%20 + cursorPosSS[1]*20+1))
+    if cursorPosSS[0] > (screen.get_width()-41)/20 and cursorPosSS[1] > (screen.get_height()-41)/20:
+        screen.blit(cursorPressed if leftMouseDown or rightMouseDown else cursor, 
+                    (cursorPosSS[0]*20+1, cursorPosSS[1]*20+1))
+    else:
+        screen.blit(cursorPressed if leftMouseDown or rightMouseDown else cursor, 
+                    (camPos[0]%20 + cursorPosSS[0]*20+1, camPos[1]%20 + cursorPosSS[1]*20+1))
     pygame.display.update()
     
     def newTurn():
@@ -138,7 +144,8 @@ while running:
                                 random.shuffle(possible_moves)
                                 for move in possible_moves:
                                     if (0 <= move[0] < img.width and 0 <= move[1] < img.height and
-                                        img.getpixel(move) in i.validTiles):
+                                        img.getpixel(move) in i.validTiles
+                                        and not list(move) == i.position): # I don't actually know if this line does anything important
                                         if any(unit.position == list(move) for unit in units):
                                             target_unit = next((unit for unit in units if unit.position == list(move)), None)
                                             if target_unit and i.team != target_unit.team:
@@ -186,6 +193,7 @@ while running:
             if event.key == pygame.K_c:
                 itarget_unit = next((unit for unit in units if unit.position == cursorPos), None)
                 if itarget_unit:
+                    selected = -1
                     units.remove(itarget_unit)
             if event.key == pygame.K_v:
                 img.putpixel(cursorPos, grassColor)
