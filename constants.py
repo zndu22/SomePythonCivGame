@@ -12,7 +12,10 @@ turnButton = pygame.image.load("graphics/turn.png")
 exclamationMark = pygame.image.load("graphics/exclamashonMark.png")
 redSquareThing = pygame.image.load("graphics/attackMarker.png")
 
+white = (255, 255, 255)
+black = (0, 0, 0)
+
 grassColor = (0, 255, 0)
 waterColor = (0, 0, 255)
 mountainColor = (180, 180, 180)
-teamColors = [(0, 0, 0), (255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255), (255, 255, 255)]
+teamColors = [(0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 255, 0), (255, 0, 255), (0, 255, 255)]

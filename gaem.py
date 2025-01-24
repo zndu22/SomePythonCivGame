@@ -23,6 +23,7 @@ selectedTeam = 0 # ! temporary variable, replace with GUI eventually, please
 
 # ------ worldgen --------
 img = Image.new("RGB", (60,60), (0,0,255))
+borders = Image.new("RGB", (60,60), (0,0,0))
 for y in range(img.height):
     for x in range(img.width):
         height = int((opensimplex.noise2(x/20, y/20) + 
@@ -32,13 +33,37 @@ for y in range(img.height):
             img.putpixel((x, y), mountainColor)
         elif height > 1:
             img.putpixel((x, y), grassColor)
+            borders.putpixel((x, y), (255, 255, 255))
         else:
             img.putpixel((x, y), waterColor)
 
 # ------- game -----------
 screen = pygame.display.set_mode((800, 500))
 
-print(str(units))
+def newTurn():
+        for i in units:
+            # ! very temporary enemy AI, please replace with something better, eventually, please
+            # I'm working on it 'lil bro
+            if i.team != 0:
+                possible_moves = points_within_distance(i.position, i.moveDist)
+                random.shuffle(possible_moves)
+                for move in possible_moves:
+                    if (0 <= move[0] < img.width and 0 <= move[1] < img.height and
+                        img.getpixel(move) in i.validTiles
+                        and not list(move) == i.position): # I don't actually know if this line does anything important
+                        if any(unit.position == list(move) for unit in units):
+                            target_unit = next((unit for unit in units if unit.position == list(move)), None)
+                            if target_unit and i.team != target_unit.team:
+                                target_unit.health -= i.attack
+                                if target_unit.health <= 0:
+                                    units.remove(target_unit)
+                        else:
+                            i.position = list(move)
+                            borders.putpixel(list(move), teamColors[i.team])
+                        i.movedThisTurn = True
+                        break
+            else:
+                i.movedThisTurn = False if i.team == 0 else True
 
 while running:
     pygame.display.set_caption(f"{str(cursorPos)} , {selected}, {str(units)}, {camPos}, {selectedTeam}")
@@ -47,17 +72,6 @@ while running:
     # draw the map
     for y in range(img.height):
         for x in range(img.width):
-            # TODO: add a border system
-            # * have a texture with colors for each team
-            # if img.getpixel((x, y)) == grassColor:
-            #     if (img.getpixel((min(x+1, img.width-1), y)) == waterColor 
-            #     or img.getpixel((x, min(y+1, img.height-1))) == waterColor
-            #     or img.getpixel((max(x-1, 0), y)) == waterColor 
-            #     or img.getpixel((x, max(y-1, 0))) == waterColor 
-            #     or img.getpixel((min(x+1, img.width-1), min(y+1, img.height-1))) == waterColor
-            #     or img.getpixel((max(x-1, 0), max(y-1, 0))) == waterColor):
-            #         pygame.draw.rect(screen, (255, 255, 255), (camPos[0] + x*20-1, camPos[1] + y*20-1, 22, 22))
-
             if img.getpixel((x, y)) == grassColor:
                 screen.blit(grass, (camPos[0] + x*20+1, camPos[1] + y*20+1))
             elif img.getpixel((x, y)) == mountainColor:
@@ -74,6 +88,25 @@ while running:
                         screen.blit(redSquareThing, (camPos[0] + x*20+1, camPos[1] + y*20+1))
                     continue
                 screen.blit(blueSquareThing, (camPos[0] + x*20+1, camPos[1] + y*20+1))
+
+            c = borders.getpixel((x, y))
+            if c in teamColors:
+                if not borders.getpixel((max(x - 1, borders.width-1), y)) == c:
+                    pygame.draw.rect(screen, black, (camPos[0] + x*20+1, camPos[1] + y*20+1, 1, 18))
+                    pygame.draw.rect(screen, c, (camPos[0] + x*20, camPos[1] + y*20, 1, 20))
+                    pygame.draw.rect(screen, black, (camPos[0] + x*20-1, camPos[1] + y*20, 1, 20))
+                if not borders.getpixel((min(x + 1, 0), y)) == c:
+                    pygame.draw.rect(screen, black, (camPos[0] + x*20+18, camPos[1] + y*20+1, 1, 18))
+                    pygame.draw.rect(screen, c, (camPos[0] + x*20+19, camPos[1] + y*20, 1, 20))
+                    pygame.draw.rect(screen, black, (camPos[0] + x*20+20, camPos[1] + y*20, 1, 20))
+                if not borders.getpixel((x, max(y - 1, borders.height-1))) == c:
+                    pygame.draw.rect(screen, black, (camPos[0] + x*20+1, camPos[1] + y*20+1, 18, 1))
+                    pygame.draw.rect(screen, c, (camPos[0] + x*20, camPos[1] + y*20, 20, 1))
+                    pygame.draw.rect(screen, black, (camPos[0] + x*20, camPos[1] + y*20-1, 20, 1))
+                if not borders.getpixel((x, min(y + 1, 0))) == c:
+                    pygame.draw.rect(screen, black, (camPos[0] + x*20+1, camPos[1] + y*20+18, 18, 1))
+                    pygame.draw.rect(screen, c, (camPos[0] + x*20, camPos[1] + y*20+19, 20, 1))
+                    pygame.draw.rect(screen, black, (camPos[0] + x*20, camPos[1] + y*20+20, 20, 1))
     
     # draw the units
     for i in units:
@@ -109,6 +142,7 @@ while running:
                         units.remove(target_unit)
             else:
                 units[selected].position = cursorPos
+                borders.putpixel(cursorPos, teamColors[units[selected].team])
             units[selected].movedThisTurn = True
             selected = -1
     
@@ -133,30 +167,6 @@ while running:
         screen.blit(cursorPressed if leftMouseDown or rightMouseDown else cursor, 
                     (camPos[0]%20 + cursorPosSS[0]*20+1, camPos[1]%20 + cursorPosSS[1]*20+1))
     pygame.display.update()
-    
-    def newTurn():
-        if event.button == 1:
-                    for i in units:
-                        # ! very temporary enemy AI, please replace with something better, eventually, please
-                        if i.team != 0:
-                            possible_moves = points_within_distance(i.position, i.moveDist)
-                            random.shuffle(possible_moves)
-                            for move in possible_moves:
-                                if (0 <= move[0] < img.width and 0 <= move[1] < img.height and
-                                    img.getpixel(move) in i.validTiles
-                                    and not list(move) == i.position): # I don't actually know if this line does anything important
-                                    if any(unit.position == list(move) for unit in units):
-                                        target_unit = next((unit for unit in units if unit.position == list(move)), None)
-                                        if target_unit and i.team != target_unit.team:
-                                            target_unit.health -= i.attack
-                                            if target_unit.health <= 0:
-                                                units.remove(target_unit)
-                                    else:
-                                        i.position = list(move)
-                                    i.movedThisTurn = True
-                                    break
-                        else:
-                            i.movedThisTurn = False if i.team == 0 else True
 
     events = pygame.event.get()
     for event in events:
@@ -169,6 +179,10 @@ while running:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 pygame.quit()
+            if event.key == pygame.K_SPACE:
+                newTurn()
+            if event.key == pygame.K_LCTRL:
+                borders.show()
             if event.key == pygame.K_1:
                 selectedTeam = 0
             if event.key == pygame.K_2:
@@ -181,10 +195,6 @@ while running:
                 selectedTeam = 4
             if event.key == pygame.K_6:
                 selectedTeam = 5
-            if event.key == pygame.K_7:
-                selectedTeam = 6
-            if event.key == pygame.K_8:
-                selectedTeam = 7
             if event.key == pygame.K_z:
                 units.append(Unit([cursorPos[0], cursorPos[1]], selectedTeam))
             if event.key == pygame.K_x:

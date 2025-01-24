@@ -18,11 +18,10 @@ class Unit:
         colorImage = self.image.copy()
         colorImage.fill(teamColors[team], special_flags=pygame.BLEND_ADD)
         self.image = colorImage
-        if not team == 0:
-            mask = pygame.mask.from_surface(self.image)
-            outline = mask.convolve(pygame.mask.Mask((3, 3), fill=True)).to_surface(setcolor=(0, 0, 0), unsetcolor=self.image.get_colorkey())
-            outline.blit(self.image, (1, 1))
-            self.image = outline
+        mask = pygame.mask.from_surface(self.image)
+        outline = mask.convolve(pygame.mask.Mask((3, 3), fill=True)).to_surface(setcolor=(0, 0, 0), unsetcolor=self.image.get_colorkey())
+        outline.blit(self.image, (1, 1))
+        self.image = outline
 
     def __str__(self):
         return f"{str(self.position)}"
