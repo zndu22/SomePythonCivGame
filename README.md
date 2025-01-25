@@ -5,3 +5,5 @@ What eventually will be a Civ like game (if I don't change my mind later) writte
 
 
 https://github.com/user-attachments/assets/66e9ca9a-2b48-4307-bcc0-aeb8743b48e5
+
+to run, you need pillow, pygame, and openSimplex
