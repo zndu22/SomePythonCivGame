@@ -24,10 +24,10 @@ class Unit:
         self.image = outline
 
     def __str__(self):
-        return f"{str(self.position)}"
+        return f"{str(self.position)}, {self.team}"
 
     def __repr__(self):
-        return f"{str(self.position)}"
+        return f"{str(self.position)}, {self.team}"
 
     def is_path_valid(self, target_pos, img):
         x0, y0 = self.position

@@ -1,5 +1,8 @@
 import pygame
 
+worldWidth = 75
+worldHeight = 75
+
 grass = pygame.image.load("graphics/gras.png")
 water = pygame.image.load("graphics/watr.png")
 mountain = pygame.image.load("graphics/mountain.png")

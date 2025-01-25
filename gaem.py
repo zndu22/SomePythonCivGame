@@ -4,7 +4,7 @@ import pygame
 from Unit import Unit, Ship
 from constants import *
 import random
-from testStuff.temp import points_within_distance
+from testStuff.temp import points_within_distance, addTuples
 
 # ------- setup ---------
 pygame.init()
@@ -22,8 +22,8 @@ units = []
 selectedTeam = 0 # ! temporary variable, replace with GUI eventually, please
 
 # ------ worldgen --------
-img = Image.new("RGB", (60,60), (0,0,255))
-borders = Image.new("RGB", (60,60), (0,0,0))
+img = Image.new("RGB", (worldWidth,worldHeight), (0,0,255))
+borders = Image.new("RGB", (worldWidth,worldHeight), (0,0,0))
 for y in range(img.height):
     for x in range(img.width):
         height = int((opensimplex.noise2(x/20, y/20) + 
@@ -31,6 +31,7 @@ for y in range(img.height):
                       opensimplex.noise2(x/3,y/3)) * 255)
         if height > 245:
             img.putpixel((x, y), mountainColor)
+            borders.putpixel((x, y), (128, 128, 128))
         elif height > 1:
             img.putpixel((x, y), grassColor)
             borders.putpixel((x, y), (255, 255, 255))
@@ -47,6 +48,10 @@ def newTurn():
             if i.team != 0:
                 possible_moves = points_within_distance(i.position, i.moveDist)
                 random.shuffle(possible_moves)
+                for j, v in enumerate(possible_moves):
+                    if borders.getpixel(v) == white:
+                        possible_moves.pop(j)
+                        possible_moves.insert(0, v)
                 for move in possible_moves:
                     if (0 <= move[0] < img.width and 0 <= move[1] < img.height and
                         img.getpixel(move) in i.validTiles
@@ -59,7 +64,8 @@ def newTurn():
                                     units.remove(target_unit)
                         else:
                             i.position = list(move)
-                            borders.putpixel(list(move), teamColors[i.team])
+                            if borders.getpixel(list(move)) == white or borders.getpixel(list(move)) in teamColors:
+                                borders.putpixel(list(move), teamColors[i.team])
                         i.movedThisTurn = True
                         break
             else:
@@ -89,24 +95,25 @@ while running:
                     continue
                 screen.blit(blueSquareThing, (camPos[0] + x*20+1, camPos[1] + y*20+1))
 
+            # this block of code is in my nightmares
             c = borders.getpixel((x, y))
             if c in teamColors:
-                if not borders.getpixel((max(x - 1, borders.width-1), y)) == c:
+                if x > 0 and borders.getpixel((x - 1, y)) != c:
                     pygame.draw.rect(screen, black, (camPos[0] + x*20+1, camPos[1] + y*20+1, 1, 18))
-                    pygame.draw.rect(screen, c, (camPos[0] + x*20, camPos[1] + y*20, 1, 20))
-                    pygame.draw.rect(screen, black, (camPos[0] + x*20-1, camPos[1] + y*20, 1, 20))
-                if not borders.getpixel((min(x + 1, 0), y)) == c:
+                    pygame.draw.rect(screen, addTuples(c, (25, 25, 25)), (camPos[0] + x*20, camPos[1] + y*20, 1, 20))
+                    # pygame.draw.rect(screen, black, (camPos[0] + x*20-1, camPos[1] + y*20, 1, 20))
+                if x < borders.width - 1 and borders.getpixel((x + 1, y)) != c:
                     pygame.draw.rect(screen, black, (camPos[0] + x*20+18, camPos[1] + y*20+1, 1, 18))
-                    pygame.draw.rect(screen, c, (camPos[0] + x*20+19, camPos[1] + y*20, 1, 20))
-                    pygame.draw.rect(screen, black, (camPos[0] + x*20+20, camPos[1] + y*20, 1, 20))
-                if not borders.getpixel((x, max(y - 1, borders.height-1))) == c:
+                    pygame.draw.rect(screen, addTuples(c, (25, 25, 25)), (camPos[0] + x*20+19, camPos[1] + y*20, 1, 20))
+                    # pygame.draw.rect(screen, black, (camPos[0] + x*20+20, camPos[1] + y*20, 1, 20))
+                if y > 0 and borders.getpixel((x, y - 1)) != c:
                     pygame.draw.rect(screen, black, (camPos[0] + x*20+1, camPos[1] + y*20+1, 18, 1))
-                    pygame.draw.rect(screen, c, (camPos[0] + x*20, camPos[1] + y*20, 20, 1))
-                    pygame.draw.rect(screen, black, (camPos[0] + x*20, camPos[1] + y*20-1, 20, 1))
-                if not borders.getpixel((x, min(y + 1, 0))) == c:
+                    pygame.draw.rect(screen, addTuples(c, (25, 25, 25)), (camPos[0] + x*20, camPos[1] + y*20, 20, 1))
+                    # pygame.draw.rect(screen, black, (camPos[0] + x*20, camPos[1] + y*20-1, 20, 1))
+                if y < borders.height - 1 and borders.getpixel((x, y + 1)) != c:
                     pygame.draw.rect(screen, black, (camPos[0] + x*20+1, camPos[1] + y*20+18, 18, 1))
-                    pygame.draw.rect(screen, c, (camPos[0] + x*20, camPos[1] + y*20+19, 20, 1))
-                    pygame.draw.rect(screen, black, (camPos[0] + x*20, camPos[1] + y*20+20, 20, 1))
+                    pygame.draw.rect(screen, addTuples(c, (25, 25, 25)) , (camPos[0] + x*20, camPos[1] + y*20+19, 20, 1))
+                    # pygame.draw.rect(screen, black, (camPos[0] + x*20, camPos[1] + y*20+20, 20, 1))
     
     # draw the units
     for i in units:
@@ -125,6 +132,9 @@ while running:
     rightMouseDown = pygame.mouse.get_pressed()[2]
 
     # handle input
+    if pygame.key.get_pressed()[pygame.K_LALT]:
+        newTurn()
+
     if leftMouseDown:
         for i, u in enumerate(units):
             if cursorPos == u.position and u.movedThisTurn == False and u.team == 0:
@@ -142,7 +152,8 @@ while running:
                         units.remove(target_unit)
             else:
                 units[selected].position = cursorPos
-                borders.putpixel(cursorPos, teamColors[units[selected].team])
+                if borders.getpixel(cursorPos) == white or borders.getpixel(cursorPos) in teamColors:
+                    borders.putpixel(cursorPos, teamColors[units[selected].team])
             units[selected].movedThisTurn = True
             selected = -1
     
@@ -181,7 +192,7 @@ while running:
                 pygame.quit()
             if event.key == pygame.K_SPACE:
                 newTurn()
-            if event.key == pygame.K_LCTRL:
+            if event.key == pygame.K_m:
                 borders.show()
             if event.key == pygame.K_1:
                 selectedTeam = 0
