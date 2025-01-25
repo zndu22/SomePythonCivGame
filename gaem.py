@@ -55,8 +55,8 @@ def addNewUnit(): # ! another very temporary thing, replace with GUI eventually,
                         t.append([x, y])
             random.shuffle(t)
             try:
-                for x in range(len(t)//10):
-                    units.append(Unit(t[0], i))
+                # for x in range(len(t)//10):
+                units.append(Unit(t[0], i))
             except IndexError:
                 continue
 
@@ -77,9 +77,10 @@ def newTurn():
                 except IndexError:
                     continue
             for move in possible_moves:
-                if (0 <= move[0] < img.width and 0 <= move[1] < img.height and
-                    img.getpixel(move) in i.validTiles
-                    and not list(move) == i.position): # I don't actually know if this line does anything important
+                if (0 <= move[0] < img.width and 0 <= move[1] < img.height
+                    and img.getpixel(move) in i.validTiles
+                    and not list(move) == i.position):
+                    # and i.is_path_valid(list(move), img)): I don't know why this doesn't work
                     if any(unit.position == list(move) for unit in units):
                         target_unit = next((unit for unit in units if unit.position == list(move)), None)
                         if target_unit and i.team != target_unit.team:
@@ -88,7 +89,7 @@ def newTurn():
                                 units.remove(target_unit)
                     else:
                         i.position = list(move)
-                        if borders.getpixel(list(move)) == white or borders.getpixel(list(move)) != teamColors[i.team]:
+                        if borders.getpixel(list(move)) == white:
                             borders.putpixel(list(move), teamColors[i.team])
                     i.movedThisTurn = True
                     break
@@ -174,11 +175,12 @@ while running:
     # handle input
     if pygame.key.get_pressed()[pygame.K_LALT]:
         newTurn()
-
+    
     if leftMouseDown:
         for i, u in enumerate(units):
             if cursorPos == u.position and u.movedThisTurn == False and u.team == 0:
                 selected = i
+            
     if rightMouseDown and selected >= 0:
         if (abs(units[selected].position[0] - cursorPos[0]) <= units[selected].moveDist 
             and abs(units[selected].position[1] - cursorPos[1]) <= units[selected].moveDist 
@@ -196,7 +198,7 @@ while running:
                     borders.putpixel(cursorPos, teamColors[units[selected].team])
             units[selected].movedThisTurn = True
             selected = -1
-    
+
     # move the camera
     pressed = pygame.key.get_pressed()
     moveSpeed = 5 if pressed[pygame.K_LSHIFT] else 1

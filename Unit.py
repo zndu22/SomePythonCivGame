@@ -56,6 +56,7 @@ class Ship(Unit):
     image = ship
     maxHealth = 20
     health = maxHealth
+    carrying_units = []
 
 
     def __init__(self, position, team = 0):
@@ -70,3 +71,16 @@ class Ship(Unit):
 
     def is_path_valid(self, target_pos, img):
         return super().is_path_valid(target_pos, img)
+
+    def load_unit(self, unit):
+        if isinstance(unit, Unit):
+            self.carrying_units.append(unit)
+            unit.position = self.position  # Update unit's position to ship's position
+
+    def unload_unit(self, unit):
+        if unit in self.carrying_units:
+            self.carrying_units.remove(unit)
+            # Optionally, update unit's position to ship's position or a new position
+
+    def get_carried_units(self):
+        return self.carrying_units
