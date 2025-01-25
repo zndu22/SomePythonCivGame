@@ -4,13 +4,14 @@ import pygame
 from Unit import Unit, Ship
 from constants import *
 import random
-from testStuff.temp import points_within_distance, addTuples
+from testStuff.temp import points_within_distance, addTuples, Render_Text
 
 # ------- setup ---------
 pygame.init()
 opensimplex.random_seed()
 pygame.mouse.set_visible(False)
 running = True
+clock = pygame.time.Clock()
 selected = -1 # -1 means nothing's selected
 leftMouseDown = False
 rightMouseDown = False
@@ -51,10 +52,11 @@ def addNewUnit(): # ! another very temporary thing, replace with GUI eventually,
             for x in range(borders.width):
                 for y in range(borders.height):
                     if borders.getpixel((x, y)) == v:
-                        t.append((x, y))
+                        t.append([x, y])
             random.shuffle(t)
             try:
-                units.append(Unit(t[0], i))
+                for x in range(len(t)//10):
+                    units.append(Unit(t[0], i))
             except IndexError:
                 continue
 
@@ -69,7 +71,7 @@ def newTurn():
             random.shuffle(possible_moves)
             for j, v in enumerate(possible_moves):
                 try:
-                    if borders.getpixel(v) == white:
+                    if borders.getpixel(v) != teamColors[i.team]:
                         possible_moves.pop(j)
                         possible_moves.insert(0, v)
                 except IndexError:
@@ -92,31 +94,37 @@ def newTurn():
                     break
         else:
             i.movedThisTurn = False if i.team == 0 else True
-        turnNum += 1
+    turnNum += 1
 
 while running:
-    pygame.display.set_caption(f"{str(cursorPos)} , {selected}, {str(units)}, {camPos}, {selectedTeam}")
+    visible_x_start = -camPos[0] // 20
+    visible_y_start = -camPos[1] // 20
+    visible_x_end = visible_x_start + screen.get_width() // 20
+    visible_y_end = visible_y_start + screen.get_height() // 20
+
+    pygame.display.set_caption(f"{turnNum}, {str(cursorPos)}, {selectedTeam} , {selected}, {str([camPos[0]//20, camPos[1]//20])}, {str(units)}")
     screen.fill((0, 0, 0))
 
     # draw the map
     for y in range(img.height):
         for x in range(img.width):
-            if img.getpixel((x, y)) == grassColor:
-                screen.blit(grass, (camPos[0] + x*20+1, camPos[1] + y*20+1))
-            elif img.getpixel((x, y)) == mountainColor:
-                screen.blit(mountain, (camPos[0] + x*20+1, camPos[1] + y*20+1))
-            else:
-                screen.blit(water, (camPos[0] + x*20+1, camPos[1] + y*20+1))
+            if visible_x_start <= x <= visible_x_end and visible_y_start <= y <= visible_y_end:
+                if img.getpixel((x, y)) == grassColor:
+                    screen.blit(grass, (camPos[0] + x*20+1, camPos[1] + y*20+1))
+                elif img.getpixel((x, y)) == mountainColor:
+                    screen.blit(mountain, (camPos[0] + x*20+1, camPos[1] + y*20+1))
+                else:
+                    screen.blit(water, (camPos[0] + x*20+1, camPos[1] + y*20+1))
 
-            if (selected >= 0 and abs(units[selected].position[0] - x) <= units[selected].moveDist 
-                              and abs(units[selected].position[1] - y) <= units[selected].moveDist
-                              and units[selected].is_path_valid([x, y], img)):
-                if any(u.position == [x, y] for u in units):
-                    target_unit = next((u for u in units if u.position == [x, y]), None)
-                    if target_unit and units[selected].team != target_unit.team:
-                        screen.blit(redSquareThing, (camPos[0] + x*20+1, camPos[1] + y*20+1))
-                    continue
-                screen.blit(blueSquareThing, (camPos[0] + x*20+1, camPos[1] + y*20+1))
+                if (selected >= 0 and abs(units[selected].position[0] - x) <= units[selected].moveDist 
+                                  and abs(units[selected].position[1] - y) <= units[selected].moveDist
+                                  and units[selected].is_path_valid([x, y], img)):
+                    if any(u.position == [x, y] for u in units):
+                        target_unit = next((u for u in units if u.position == [x, y]), None)
+                        if target_unit and units[selected].team != target_unit.team:
+                            screen.blit(redSquareThing, (camPos[0] + x*20+1, camPos[1] + y*20+1))
+                        continue
+                    screen.blit(blueSquareThing, (camPos[0] + x*20+1, camPos[1] + y*20+1))
 
             # this block of code is in my nightmares
             c = borders.getpixel((x, y))
@@ -138,9 +146,11 @@ while running:
                     pygame.draw.rect(screen, addTuples(c, (25, 25, 25)) , (camPos[0] + x*20, camPos[1] + y*20+19, 20, 1))
                     # pygame.draw.rect(screen, black, (camPos[0] + x*20, camPos[1] + y*20+20, 20, 1))
     
-    # draw the units
+    # # draw the units
     for i in units:
-        screen.blit(i.image, (camPos[0] + i.position[0]*20+1, camPos[1] + i.position[1]*20+1))
+        if visible_x_start <= i.position[0] <= visible_x_end and visible_y_start <= i.position[1] <= visible_y_end:
+                screen.blit(i.image, (camPos[0] + i.position[0]*20+1, camPos[1] + i.position[1]*20+1))        
+        
         if cursorPos == i.position and i.health < i.maxHealth:
             pygame.draw.rect(screen, "black", (camPos[0] + i.position[0]*20+4, camPos[1] + i.position[1]*20+7, 12, 8))
             pygame.draw.rect(screen, "red", (camPos[0] + i.position[0]*20+5, camPos[1] + i.position[1]*20+8, 10, 6))
@@ -148,9 +158,12 @@ while running:
         if not i.movedThisTurn and i.team == 0:
             screen.blit(exclamationMark, (camPos[0] + i.position[0]*20+1, camPos[1] + i.position[1]*20+1))
     
+    # * draw UI past here
     # this is an abomoination, I'm sorry to anyone who has the misfortunate of reading this
     if showMinimap:
-        screen.blit(pygame.transform.scale(pygame.image.fromstring(borders.tobytes(), borders.size, borders.mode).convert(), (borders.width * 2, borders.height * 2)), (screen.get_width()-borders.width*2, 0))
+        screen.blit(pygame.transform.scale(pygame.image.fromstring(borders.tobytes(), borders.size, borders.mode).convert(), (borders.width * 2,borders.height * 2)), (screen.get_width()-borders.width*2, 0))
+        pygame.draw.rect(screen, (255, 255, 0), ((-camPos[0]//10 +  screen.get_width()-borders.width*2, -camPos[1]//10), (80, 50)), 2)
+    Render_Text(screen, str(int(clock.get_fps())), (255,255,255), (0,0))
     
     # update input variables
     cursorPosSS = [int(pygame.mouse.get_pos()[0]/20), int(pygame.mouse.get_pos()[1]/20)]
@@ -256,3 +269,4 @@ while running:
                 img.putpixel(cursorPos, waterColor)
             if event.key == pygame.K_n:
                 img.putpixel(cursorPos, mountainColor)
+    clock.tick()

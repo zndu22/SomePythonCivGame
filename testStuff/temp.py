@@ -1,3 +1,5 @@
+import pygame
+
 # I got a bad feeling this file is going to become very not temporary
 
 def points_within_distance(currPos, distance):
@@ -10,3 +12,8 @@ def points_within_distance(currPos, distance):
 
 def addTuples(a, b):
     return tuple(max(min(255, a + b), 0) for a, b in zip(a, b))
+
+def Render_Text(window, what, color, where):
+    font = pygame.font.Font('graphics/Roboto-Italic-VariableFont_wdth,wght.ttf', 30)
+    text = font.render(what, 1, pygame.Color(color), (0, 0, 0))
+    window.blit(text, where)
