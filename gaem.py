@@ -18,6 +18,8 @@ cursorPosSS = [0, 0] # [0] is x and [1] is y
 cursorPos = [0, 0] # same ^
 camPos = [0, 0] # in pixel space
 units = []
+turnNum = 1
+showMinimap = False
 
 selectedTeam = 0 # ! temporary variable, replace with GUI eventually, please
 
@@ -41,38 +43,56 @@ for y in range(img.height):
 # ------- game -----------
 screen = pygame.display.set_mode((800, 500))
 
+def addNewUnit(): # ! another very temporary thing, replace with GUI eventually, pretty please
+    global turnNum
+    if turnNum % 10 == 0 and len(units) < 500:
+        for i, v in enumerate(teamColors):
+            t = []
+            for x in range(borders.width):
+                for y in range(borders.height):
+                    if borders.getpixel((x, y)) == v:
+                        t.append((x, y))
+            random.shuffle(t)
+            try:
+                units.append(Unit(t[0], i))
+            except IndexError:
+                continue
+
 def newTurn():
-        for i in units:
-            # ! very temporary enemy AI, please replace with something better, eventually, please
-            # I'm working on it 'lil bro
-            if i.team != 0:
-                possible_moves = points_within_distance(i.position, i.moveDist)
-                random.shuffle(possible_moves)
-                for j, v in enumerate(possible_moves):
-                    try:
-                        if borders.getpixel(v) == white:
-                            possible_moves.pop(j)
-                            possible_moves.insert(0, v)
-                    except IndexError:
-                        continue
-                for move in possible_moves:
-                    if (0 <= move[0] < img.width and 0 <= move[1] < img.height and
-                        img.getpixel(move) in i.validTiles
-                        and not list(move) == i.position): # I don't actually know if this line does anything important
-                        if any(unit.position == list(move) for unit in units):
-                            target_unit = next((unit for unit in units if unit.position == list(move)), None)
-                            if target_unit and i.team != target_unit.team:
-                                target_unit.health -= i.attack
-                                if target_unit.health <= 0:
-                                    units.remove(target_unit)
-                        else:
-                            i.position = list(move)
-                            if borders.getpixel(list(move)) == white or borders.getpixel(list(move)) in teamColors:
-                                borders.putpixel(list(move), teamColors[i.team])
-                        i.movedThisTurn = True
-                        break
-            else:
-                i.movedThisTurn = False if i.team == 0 else True
+    global turnNum
+    addNewUnit() 
+    for i in units:
+        # ! very temporary enemy AI, please replace with something better, eventually, please
+        # I'm working on it 'lil bro
+        if i.team != 0:
+            possible_moves = points_within_distance(i.position, i.moveDist)
+            random.shuffle(possible_moves)
+            for j, v in enumerate(possible_moves):
+                try:
+                    if borders.getpixel(v) == white:
+                        possible_moves.pop(j)
+                        possible_moves.insert(0, v)
+                except IndexError:
+                    continue
+            for move in possible_moves:
+                if (0 <= move[0] < img.width and 0 <= move[1] < img.height and
+                    img.getpixel(move) in i.validTiles
+                    and not list(move) == i.position): # I don't actually know if this line does anything important
+                    if any(unit.position == list(move) for unit in units):
+                        target_unit = next((unit for unit in units if unit.position == list(move)), None)
+                        if target_unit and i.team != target_unit.team:
+                            target_unit.health -= i.attack
+                            if target_unit.health <= 0:
+                                units.remove(target_unit)
+                    else:
+                        i.position = list(move)
+                        if borders.getpixel(list(move)) == white or borders.getpixel(list(move)) != teamColors[i.team]:
+                            borders.putpixel(list(move), teamColors[i.team])
+                    i.movedThisTurn = True
+                    break
+        else:
+            i.movedThisTurn = False if i.team == 0 else True
+        turnNum += 1
 
 while running:
     pygame.display.set_caption(f"{str(cursorPos)} , {selected}, {str(units)}, {camPos}, {selectedTeam}")
@@ -127,6 +147,10 @@ while running:
             pygame.draw.rect(screen, "green", (camPos[0] + i.position[0]*20+5, camPos[1] + i.position[1]*20+8, 10 * (i.health/i.maxHealth), 6))
         if not i.movedThisTurn and i.team == 0:
             screen.blit(exclamationMark, (camPos[0] + i.position[0]*20+1, camPos[1] + i.position[1]*20+1))
+    
+    # this is an abomoination, I'm sorry to anyone who has the misfortunate of reading this
+    if showMinimap:
+        screen.blit(pygame.transform.scale(pygame.image.fromstring(borders.tobytes(), borders.size, borders.mode).convert(), (borders.width * 2, borders.height * 2)), (screen.get_width()-borders.width*2, 0))
     
     # update input variables
     cursorPosSS = [int(pygame.mouse.get_pos()[0]/20), int(pygame.mouse.get_pos()[1]/20)]
@@ -196,7 +220,7 @@ while running:
             if event.key == pygame.K_SPACE:
                 newTurn()
             if event.key == pygame.K_m:
-                borders.show()
+                showMinimap = not showMinimap
             if event.key == pygame.K_1:
                 selectedTeam = 0
             if event.key == pygame.K_2:
