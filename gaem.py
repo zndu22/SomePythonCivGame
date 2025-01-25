@@ -49,9 +49,12 @@ def newTurn():
                 possible_moves = points_within_distance(i.position, i.moveDist)
                 random.shuffle(possible_moves)
                 for j, v in enumerate(possible_moves):
-                    if borders.getpixel(v) == white:
-                        possible_moves.pop(j)
-                        possible_moves.insert(0, v)
+                    try:
+                        if borders.getpixel(v) == white:
+                            possible_moves.pop(j)
+                            possible_moves.insert(0, v)
+                    except IndexError:
+                        continue
                 for move in possible_moves:
                     if (0 <= move[0] < img.width and 0 <= move[1] < img.height and
                         img.getpixel(move) in i.validTiles
@@ -206,6 +209,14 @@ while running:
                 selectedTeam = 4
             if event.key == pygame.K_6:
                 selectedTeam = 5
+            if event.key == pygame.K_7:
+                selectedTeam = 6
+            if event.key == pygame.K_8:
+                selectedTeam = 7
+            if event.key == pygame.K_9:
+                selectedTeam = 8
+            if event.key == pygame.K_0:
+                selectedTeam = 9 
             if event.key == pygame.K_z:
                 units.append(Unit([cursorPos[0], cursorPos[1]], selectedTeam))
             if event.key == pygame.K_x:

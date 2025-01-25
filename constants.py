@@ -1,7 +1,7 @@
 import pygame
 
-worldWidth = 75
-worldHeight = 75
+worldWidth = 100
+worldHeight = 100
 
 grass = pygame.image.load("graphics/gras.png")
 water = pygame.image.load("graphics/watr.png")
@@ -21,4 +21,4 @@ black = (0, 0, 0)
 grassColor = (0, 255, 0)
 waterColor = (0, 0, 255)
 mountainColor = (180, 180, 180)
-teamColors = [(0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 255, 0), (255, 0, 255), (0, 255, 255)]
+teamColors = [(0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 255, 0), (255, 0, 255), (0, 255, 255), (200, 0, 200), (0, 252, 126), (164, 252, 0), (252, 172, 0)]
