@@ -1,4 +1,5 @@
 import pygame
+from testStuff.temp import addTuples
 from constants import *
 
 class Unit:
@@ -11,6 +12,7 @@ class Unit:
     maxHealth = 10
     health = maxHealth
     attack = 2
+    carried = False
 
     def __init__(self, position, team = 0):
         self.position = position
@@ -29,6 +31,12 @@ class Unit:
     def __repr__(self):
         return f"{str(self.position)}, {self.team}"
 
+    def move(self, position):
+        self.position = position
+    
+    def isTileValid(self, map, position):
+        return map.getpixel(position) == grassColor
+
     def is_path_valid(self, target_pos, img):
         x0, y0 = self.position
         x1, y1 = target_pos
@@ -39,7 +47,7 @@ class Unit:
         err = dx - dy
 
         while (x0, y0) != (x1, y1):
-            if img.getpixel((x0, y0)) not in self.validTiles:
+            if not self.isTileValid(img, (x0, y0)):
                 return False
             e2 = err * 2
             if e2 > -dy:
@@ -48,11 +56,11 @@ class Unit:
             if e2 < dx:
                 err += dx
                 y0 += sy
-        return img.getpixel((x1, y1)) in self.validTiles and not self.movedThisTurn
+        return self.isTileValid(img, (x1, y1)) and not self.movedThisTurn
 
 class Ship(Unit):
     moveDist = 3
-    validTiles = [waterColor, grassColor]
+    validTiles = [waterColor]
     image = ship
     maxHealth = 20
     health = maxHealth
@@ -71,6 +79,23 @@ class Ship(Unit):
 
     def is_path_valid(self, target_pos, img):
         return super().is_path_valid(target_pos, img)
+    
+    def move(self, position):
+        self.position = position
+        for i in self.carrying_units:
+            i.position = position
+    
+    def isTileValid(self, map, position):
+        if map.getpixel(position) == waterColor:
+            return True
+        else:
+            adjacent_positions = [
+                (0, 1), (0, -1), (1, 0), (-1, 0)
+            ]
+            for adj in adjacent_positions:
+                if map.getpixel(addTuples(position, adj)) == waterColor:
+                    return True
+            return False
 
     def load_unit(self, unit):
         if isinstance(unit, Unit) and not isinstance(unit, Ship):

@@ -78,7 +78,7 @@ def newTurn():
                     continue
             for move in possible_moves:
                 if (0 <= move[0] < img.width and 0 <= move[1] < img.height
-                    and img.getpixel(move) in i.validTiles
+                    and i.isTileValid(img, move)
                     and not list(move) == i.position):
                     # and i.is_path_valid(list(move), img)): I don't know why this doesn't work
                     if any(unit.position == list(move) for unit in units):
@@ -176,10 +176,13 @@ while running:
     if pygame.key.get_pressed()[pygame.K_LALT]:
         newTurn()
     
-    if leftMouseDown:
-        for i, u in enumerate(units):
-            if cursorPos == u.position and u.movedThisTurn == False and u.team == 0:
-                selected = i
+    # if leftMouseDown:
+    #     if selected == 0:
+    #         for i, u in enumerate(units):
+    #             if cursorPos == u.position and u.movedThisTurn == False and u.carried == False and u.team == 0:
+    #                 selected = i
+    #     if isinstance(units[selected], ship):
+
             
     if rightMouseDown and selected >= 0:
         if (abs(units[selected].position[0] - cursorPos[0]) <= units[selected].moveDist 
@@ -194,16 +197,16 @@ while running:
                         units.remove(target_unit)
                 elif isinstance(target_unit, Ship):
                     target_unit.load_unit(units[selected])
-                    print(target_unit.carrying_units)
+                    units[selected].carried = True
             else:
-                units[selected].position = cursorPos
+                units[selected].move(cursorPos)
                 if borders.getpixel(cursorPos) == white or borders.getpixel(cursorPos) in teamColors:
                     borders.putpixel(cursorPos, teamColors[units[selected].team])
             try:
                 units[selected].movedThisTurn = True
             except:
                 pass
-            selected = -1
+        selected = -1
 
     # move the camera
     pressed = pygame.key.get_pressed()
@@ -234,6 +237,19 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if cursorPosSS[0] > (screen.get_width()-61)/20 and cursorPosSS[1] > (screen.get_height()-61)/20: 
                 newTurn()
+            # 1 - left click
+            # 2 - middle click
+            # 3 - right click
+            # 4 - scroll up
+            # 5 - scroll down
+            if event.button == 1:
+                if selected < 0:
+                    for i, u in enumerate(units):
+                        if cursorPos == u.position and u.movedThisTurn == False and u.carried == False and u.team == 0:
+                            selected = i
+                if isinstance(units[selected], Ship):
+                    try: selected == units.index(units[selected].carrying_units[0])
+                    except: pass
         
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
