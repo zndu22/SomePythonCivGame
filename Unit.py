@@ -52,7 +52,7 @@ class Unit:
 
 class Ship(Unit):
     moveDist = 3
-    validTiles = [waterColor]
+    validTiles = [waterColor, grassColor]
     image = ship
     maxHealth = 20
     health = maxHealth
@@ -73,13 +73,16 @@ class Ship(Unit):
         return super().is_path_valid(target_pos, img)
 
     def load_unit(self, unit):
-        if isinstance(unit, Unit):
+        if isinstance(unit, Unit) and not isinstance(unit, Ship):
             self.carrying_units.append(unit)
             unit.position = self.position  # Update unit's position to ship's position
 
-    def unload_unit(self, unit):
-        if unit in self.carrying_units:
-            self.carrying_units.remove(unit)
+    def unload_unit(self, unit, position):
+        if len(unit) > 0:
+            t = self.carrying_units[unit]
+            self.carrying_units.pop(unit)
+            t.position = position
+            return t
             # Optionally, update unit's position to ship's position or a new position
 
     def get_carried_units(self):

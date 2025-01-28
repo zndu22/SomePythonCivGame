@@ -89,8 +89,8 @@ def newTurn():
                                 units.remove(target_unit)
                     else:
                         i.position = list(move)
-                        if borders.getpixel(list(move)) == white:
-                            borders.putpixel(list(move), teamColors[i.team])
+                        if borders.getpixel(move) == white or borders.getpixel(move) in teamColors:
+                            borders.putpixel((move), teamColors[i.team])
                     i.movedThisTurn = True
                     break
         else:
@@ -192,11 +192,17 @@ while running:
                     if target_unit.health <= 0:
                         selected -= 1 if selected > units.index(target_unit) else 0
                         units.remove(target_unit)
+                elif isinstance(target_unit, Ship):
+                    target_unit.load_unit(units[selected])
+                    print(target_unit.carrying_units)
             else:
                 units[selected].position = cursorPos
                 if borders.getpixel(cursorPos) == white or borders.getpixel(cursorPos) in teamColors:
                     borders.putpixel(cursorPos, teamColors[units[selected].team])
-            units[selected].movedThisTurn = True
+            try:
+                units[selected].movedThisTurn = True
+            except:
+                pass
             selected = -1
 
     # move the camera
