@@ -11,7 +11,7 @@ class Unit:
     team = 0 # 0 is player's team
     maxHealth = 10
     health = maxHealth
-    attack = 2
+    attack = 3
     carried = False
 
     def __init__(self, position, team = 0):

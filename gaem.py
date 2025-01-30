@@ -1,4 +1,4 @@
-from PIL import Image
+from PIL import Image, ImageDraw
 import opensimplex
 import pygame
 from Unit import Unit, Ship
@@ -8,7 +8,6 @@ from testStuff.temp import points_within_distance, addTuples, Render_Text
 
 # ------- setup ---------
 pygame.init()
-opensimplex.random_seed()
 pygame.mouse.set_visible(False)
 running = True
 clock = pygame.time.Clock()
@@ -26,20 +25,27 @@ selectedTeam = 0 # ! temporary variable, replace with GUI eventually, please
 
 # ------ worldgen --------
 img = Image.new("RGB", (worldWidth,worldHeight), (0,0,255))
+imgclr = ImageDraw.Draw(img)
 borders = Image.new("RGB", (worldWidth,worldHeight), (0,0,0))
-for y in range(img.height):
-    for x in range(img.width):
-        height = int((opensimplex.noise2(x/20, y/20) + 
-                      opensimplex.noise2(x/5,y/5) + 
-                      opensimplex.noise2(x/3,y/3)) * 255)
-        if height > 245:
-            img.putpixel((x, y), mountainColor)
-            borders.putpixel((x, y), (128, 128, 128))
-        elif height > 1:
-            img.putpixel((x, y), grassColor)
-            borders.putpixel((x, y), (255, 255, 255))
-        else:
-            img.putpixel((x, y), waterColor)
+bordersclr = ImageDraw.Draw(borders)
+def genWorld():
+    imgclr.rectangle([(0,0),img.size], fill = (0,0,255))
+    bordersclr.rectangle([(0,0),borders.size], fill = (0,0,0) )
+    opensimplex.random_seed()
+    for y in range(img.height):
+        for x in range(img.width):
+            height = int((opensimplex.noise2(x/20, y/20) + 
+                          opensimplex.noise2(x/5,y/5) + 
+                          opensimplex.noise2(x/3,y/3)) * 255)
+            if height > 245:
+                img.putpixel((x, y), mountainColor)
+                borders.putpixel((x, y), (128, 128, 128))
+            elif height > 1:
+                img.putpixel((x, y), grassColor)
+                borders.putpixel((x, y), (255, 255, 255))
+            else:
+                img.putpixel((x, y), waterColor)
+genWorld()
 
 # ------- game -----------
 screen = pygame.display.set_mode((800, 500))
@@ -195,9 +201,11 @@ while running:
                     if target_unit.health <= 0:
                         selected -= 1 if selected > units.index(target_unit) else 0
                         units.remove(target_unit)
-                elif isinstance(target_unit, Ship):
-                    target_unit.load_unit(units[selected])
-                    units[selected].carried = True
+                elif target_unit.team == units[selected].team:
+                    target_unit.health += 2
+                # elif isinstance(target_unit, Ship):
+                #     target_unit.load_unit(units[selected])
+                #     units[selected].carried = True
             else:
                 units[selected].move(cursorPos)
                 if borders.getpixel(cursorPos) == white or borders.getpixel(cursorPos) in teamColors:
@@ -243,13 +251,13 @@ while running:
             # 4 - scroll up
             # 5 - scroll down
             if event.button == 1:
-                if selected < 0:
-                    for i, u in enumerate(units):
-                        if cursorPos == u.position and u.movedThisTurn == False and u.carried == False and u.team == 0:
-                            selected = i
-                if isinstance(units[selected], Ship):
-                    try: selected == units.index(units[selected].carrying_units[0])
-                    except: pass
+                for i, u in enumerate(units):
+                    if cursorPos == u.position and u.movedThisTurn == False and u.carried == False and u.team == 0:
+                        selected = i        
+                try: 
+                    if isinstance(units[selected], Ship):
+                        selected = units.index(units[selected].carrying_units[0])
+                except: pass
         
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
@@ -289,8 +297,17 @@ while running:
                     units.remove(itarget_unit)
             if event.key == pygame.K_v:
                 img.putpixel(cursorPos, grassColor)
+                borders.putpixel(cursorPos, white)
             if event.key == pygame.K_b:
                 img.putpixel(cursorPos, waterColor)
+                borders.putpixel(cursorPos, black)
             if event.key == pygame.K_n:
                 img.putpixel(cursorPos, mountainColor)
+                borders.putpixel(cursorPos, (180, 180, 180))
+            if event.key == pygame.K_r:
+                genWorld()
+            if event.key == pygame.K_t:
+                for i in units:
+                    del i
+                units = []
     clock.tick()
