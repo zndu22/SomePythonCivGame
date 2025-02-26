@@ -1,6 +1,6 @@
 import pygame
 
-worldSize = 150
+worldSize = 100
 worldWidth = worldSize
 worldHeight = worldSize
 

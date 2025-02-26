@@ -4,7 +4,7 @@ import pygame
 from Unit import Unit, Ship
 from constants import *
 import random
-from testStuff.temp import points_within_distance, addTuples, Render_Text
+from testStuff.temp import *
 
 # ------- setup ---------
 pygame.init()
@@ -36,11 +36,12 @@ def genWorld():
         for x in range(img.width):
             height = int((opensimplex.noise2(x/20, y/20) + 
                           opensimplex.noise2(x/5,y/5) + 
-                          opensimplex.noise2(x/3,y/3)) * 255)
-            if height > 245:
+                          opensimplex.noise2(x/3,y/3) + 1) * 255 / 2)
+            # height = lerp(height, (-0.1*((x-(worldWidth/2))**2)+(-0.2*(y-(worldHeight/2))**2)+245), 0.5)
+            if height > 250:
                 img.putpixel((x, y), mountainColor)
                 borders.putpixel((x, y), (128, 128, 128))
-            elif height > 1:
+            elif height > 100:
                 img.putpixel((x, y), grassColor)
                 borders.putpixel((x, y), (255, 255, 255))
             else:
@@ -48,8 +49,11 @@ def genWorld():
 genWorld()
 
 # ------- game -----------
-screen = pygame.display.set_mode((800, 500))
+screen = pygame.display.set_mode((800, 500), pygame.HWACCEL)
+terrainTexture = pygame.Surface((worldWidth * 20, worldHeight * 20))
+worldTexture = pygame.Surface((worldWidth * 20, worldHeight * 20))
 
+# a way to get new units in the game
 def addNewUnit(): # ! another very temporary thing, replace with GUI eventually, pretty please
     global turnNum
     if turnNum % 10 == 0 and len(units) < 500:
@@ -102,6 +106,59 @@ def newTurn():
         else:
             i.movedThisTurn = False if i.team == 0 else True
     turnNum += 1
+    updateWorldTexture()
+
+def updateTerrainTexture():
+    terrainTexture.fill((0, 0, 0))
+
+    # draw the map
+    for y in range(img.height):
+        for x in range(img.width):
+            if img.getpixel((x, y)) == grassColor:
+                terrainTexture.blit(grass, (x*20+1, y*20+1))
+            elif img.getpixel((x, y)) == mountainColor:
+                terrainTexture.blit(mountain, (x*20+1, y*20+1))
+            else:
+                terrainTexture.blit(water, (x*20+1, y*20+1))
+updateTerrainTexture()
+
+# god himself came to me in a dream and gave me this optimization~
+def updateWorldTexture():
+    worldTexture.fill((0, 0, 0))
+    worldTexture.blit(terrainTexture, (0,0))
+    # draw the map
+    for y in range(img.height):
+        for x in range(img.width):
+            # this block of code is in my nightmares
+            c = borders.getpixel((x, y))
+            if c in teamColors:
+                if x > 0 and borders.getpixel((x - 1, y)) != c:
+                    pygame.draw.rect(worldTexture, black, (x*20+1, y*20+1, 1, 18))
+                    pygame.draw.rect(worldTexture, addTuples(c, (25, 25, 25)), (x*20, y*20, 1, 20))
+                    # pygame.draw.rect(screen, black, (camPos[0] + x*20-1, camPos[1] + y*20, 1, 20))
+                if x < borders.width - 1 and borders.getpixel((x + 1, y)) != c:
+                    pygame.draw.rect(worldTexture, black, (x*20+18, y*20+1, 1, 18))
+                    pygame.draw.rect(worldTexture, addTuples(c, (25, 25, 25)), (x*20+19, y*20, 1, 20))
+                    # pygame.draw.rect(screen, black, (camPos[0] + x*20+20, camPos[1] + y*20, 1, 20))
+                if y > 0 and borders.getpixel((x, y - 1)) != c:
+                    pygame.draw.rect(worldTexture, black, (x*20+1, y*20+1, 18, 1))
+                    pygame.draw.rect(worldTexture, addTuples(c, (25, 25, 25)), (x*20, y*20, 20, 1))
+                    # pygame.draw.rect(screen, black, (camPos[0] + x*20, camPos[1] + y*20-1, 20, 1))
+                if y < borders.height - 1 and borders.getpixel((x, y + 1)) != c:
+                    pygame.draw.rect(worldTexture, black, (x*20+1, y*20+18, 18, 1))
+                    pygame.draw.rect(worldTexture, addTuples(c, (25, 25, 25)) , (x*20, y*20+19, 20, 1))
+                    # pygame.draw.rect(screen, black, (camPos[0] + x*20, camPos[1] + y*20+20, 20, 1))
+            if (selected >= 0 and abs(units[selected].position[0] - x) <= units[selected].moveDist 
+                              and abs(units[selected].position[1] - y) <= units[selected].moveDist
+                              and units[selected].is_path_valid([x, y], img)):
+                if any(u.position == [x, y] for u in units):
+                    target_unit = next((u for u in units if u.position == [x, y]), None)
+                    if target_unit and units[selected].team != target_unit.team:
+                        worldTexture.blit(redSquareThing, (x*20+1, y*20+1))
+                    continue
+                worldTexture.blit(blueSquareThing, (x*20+1, y*20+1))
+    
+updateWorldTexture()
 
 while running:
     visible_x_start = -camPos[0] // 20
@@ -109,51 +166,8 @@ while running:
     visible_x_end = visible_x_start + screen.get_width() // 20
     visible_y_end = visible_y_start + screen.get_height() // 20
 
-    pygame.display.set_caption(f"{turnNum}, {str(cursorPos)}, {selectedTeam} , {selected}, {str([camPos[0]//20, camPos[1]//20])}, {str(units)}")
-    screen.fill((0, 0, 0))
-
-    # draw the map
-    for y in range(img.height):
-        for x in range(img.width):
-            if visible_x_start <= x <= visible_x_end and visible_y_start <= y <= visible_y_end:
-                if img.getpixel((x, y)) == grassColor:
-                    screen.blit(grass, (camPos[0] + x*20+1, camPos[1] + y*20+1))
-                elif img.getpixel((x, y)) == mountainColor:
-                    screen.blit(mountain, (camPos[0] + x*20+1, camPos[1] + y*20+1))
-                else:
-                    screen.blit(water, (camPos[0] + x*20+1, camPos[1] + y*20+1))
-
-                if (selected >= 0 and abs(units[selected].position[0] - x) <= units[selected].moveDist 
-                                  and abs(units[selected].position[1] - y) <= units[selected].moveDist
-                                  and units[selected].is_path_valid([x, y], img)):
-                    if any(u.position == [x, y] for u in units):
-                        target_unit = next((u for u in units if u.position == [x, y]), None)
-                        if target_unit and units[selected].team != target_unit.team:
-                            screen.blit(redSquareThing, (camPos[0] + x*20+1, camPos[1] + y*20+1))
-                        continue
-                    screen.blit(blueSquareThing, (camPos[0] + x*20+1, camPos[1] + y*20+1))
-
-            # this block of code is in my nightmares
-            c = borders.getpixel((x, y))
-            if c in teamColors:
-                if x > 0 and borders.getpixel((x - 1, y)) != c:
-                    pygame.draw.rect(screen, black, (camPos[0] + x*20+1, camPos[1] + y*20+1, 1, 18))
-                    pygame.draw.rect(screen, addTuples(c, (25, 25, 25)), (camPos[0] + x*20, camPos[1] + y*20, 1, 20))
-                    # pygame.draw.rect(screen, black, (camPos[0] + x*20-1, camPos[1] + y*20, 1, 20))
-                if x < borders.width - 1 and borders.getpixel((x + 1, y)) != c:
-                    pygame.draw.rect(screen, black, (camPos[0] + x*20+18, camPos[1] + y*20+1, 1, 18))
-                    pygame.draw.rect(screen, addTuples(c, (25, 25, 25)), (camPos[0] + x*20+19, camPos[1] + y*20, 1, 20))
-                    # pygame.draw.rect(screen, black, (camPos[0] + x*20+20, camPos[1] + y*20, 1, 20))
-                if y > 0 and borders.getpixel((x, y - 1)) != c:
-                    pygame.draw.rect(screen, black, (camPos[0] + x*20+1, camPos[1] + y*20+1, 18, 1))
-                    pygame.draw.rect(screen, addTuples(c, (25, 25, 25)), (camPos[0] + x*20, camPos[1] + y*20, 20, 1))
-                    # pygame.draw.rect(screen, black, (camPos[0] + x*20, camPos[1] + y*20-1, 20, 1))
-                if y < borders.height - 1 and borders.getpixel((x, y + 1)) != c:
-                    pygame.draw.rect(screen, black, (camPos[0] + x*20+1, camPos[1] + y*20+18, 18, 1))
-                    pygame.draw.rect(screen, addTuples(c, (25, 25, 25)) , (camPos[0] + x*20, camPos[1] + y*20+19, 20, 1))
-                    # pygame.draw.rect(screen, black, (camPos[0] + x*20, camPos[1] + y*20+20, 20, 1))
-    
-    # # draw the units
+    screen.blit(worldTexture, (camPos[0], camPos[1]))
+    # draw the units
     for i in units:
         if visible_x_start <= i.position[0] <= visible_x_end and visible_y_start <= i.position[1] <= visible_y_end:
                 screen.blit(i.image, (camPos[0] + i.position[0]*20+1, camPos[1] + i.position[1]*20+1))        
@@ -164,11 +178,13 @@ while running:
             pygame.draw.rect(screen, "green", (camPos[0] + i.position[0]*20+5, camPos[1] + i.position[1]*20+8, 10 * (i.health/i.maxHealth), 6))
         if not i.movedThisTurn and i.team == 0:
             screen.blit(exclamationMark, (camPos[0] + i.position[0]*20+1, camPos[1] + i.position[1]*20+1))
-    
+
+    pygame.display.set_caption(f"{turnNum}, {str(cursorPos)}, {selectedTeam} , {selected}, {str([camPos[0]//20, camPos[1]//20])}, {str(units)}")
+
     # * draw UI past here
     # this is an abomoination, I'm sorry to anyone who has the misfortunate of reading this
     if showMinimap:
-        screen.blit(pygame.transform.scale(pygame.image.fromstring(borders.tobytes(), borders.size, borders.mode).convert(), (borders.width * 2,borders.height * 2)), (screen.get_width()-borders.width*2, 0))
+        screen.blit(pygame.transform.scale(pygame.image.fromstring(borders.tobytes(), borders.size, borders.mode).convert(), (borders.width*2,borders.height*2)), (screen.get_width()-borders.width*2, 0))
         pygame.draw.rect(screen, (255, 255, 0), ((-camPos[0]//10 +  screen.get_width()-borders.width*2, -camPos[1]//10), (80, 50)), 2)
     Render_Text(screen, str(int(clock.get_fps())), (255,255,255), (0,0))
     
@@ -215,6 +231,7 @@ while running:
             except:
                 pass
         selected = -1
+        updateWorldTexture()
 
     # move the camera
     pressed = pygame.key.get_pressed()
@@ -253,12 +270,14 @@ while running:
             if event.button == 1:
                 for i, u in enumerate(units):
                     if cursorPos == u.position and u.movedThisTurn == False and u.carried == False and u.team == 0:
-                        selected = i        
+                        selected = i
+                        updateWorldTexture()
                 try: 
                     if isinstance(units[selected], Ship):
                         selected = units.index(units[selected].carrying_units[0])
                 except: pass
         
+        # brace yourself, the code below gets pretty ugly
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 pygame.quit()
