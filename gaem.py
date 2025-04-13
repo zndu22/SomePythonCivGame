@@ -15,7 +15,9 @@ selected = -1 # -1 means nothing's selected
 leftMouseDown = False
 rightMouseDown = False
 cursorPosSS = [0, 0] # [0] is x and [1] is y
-cursorPos = [0, 0] # same ^
+cursorPos = [0, 0] # same ^^
+cursorPosDown = [0, 0] # in SS
+cursorPosDelta = [0, 0] # also in SS
 camPos = [0, 0] # in pixel space
 units = []
 turnNum = 0
@@ -37,7 +39,7 @@ def genWorld():
             height = int((opensimplex.noise2(x/20, y/20) + 
                           opensimplex.noise2(x/5,y/5) + 
                           opensimplex.noise2(x/3,y/3) + 1) * 255 / 2)
-            # height = lerp(height, (-0.1*((x-(worldWidth/2))**2)+(-0.2*(y-(worldHeight/2))**2)+245), 0.5)
+            height = lerp(height, (-0.1*((x-(worldWidth/2))**2)+(-0.2*(y-(worldHeight/2))**2)+245), 0.2)
             if height > 250:
                 img.putpixel((x, y), mountainColor)
                 borders.putpixel((x, y), (128, 128, 128))
@@ -46,17 +48,21 @@ def genWorld():
                 borders.putpixel((x, y), (255, 255, 255))
             else:
                 img.putpixel((x, y), waterColor)
+                borders.putpixel((x, y), black)
+                
+            # img.putpixel((x, y), grassColor)
+            # borders.putpixel((x, y), (255, 255, 255))
 genWorld()
 
 # ------- game -----------
-screen = pygame.display.set_mode((800, 500), pygame.HWACCEL)
+screen = pygame.display.set_mode((800, 500), pygame.HWACCEL | pygame.RESIZABLE)
 terrainTexture = pygame.Surface((worldWidth * 20, worldHeight * 20))
 worldTexture = pygame.Surface((worldWidth * 20, worldHeight * 20))
 
 # a way to get new units in the game
-def addNewUnit(): # ! another very temporary thing, replace with GUI eventually, pretty please
+def addNewUnit(): # ! another very temporary thing, replace with actual gameplay eventually, pretty please
     global turnNum
-    if turnNum % 10 == 0 and len(units) < 500:
+    if turnNum % 10 == 0 and len(units) < 1000:
         for i, v in enumerate(teamColors):
             t = []
             for x in range(borders.width):
@@ -86,17 +92,28 @@ def newTurn():
     global turnNum
     addNewUnit() 
     for i in units:
-        # ! very temporary enemy AI, please replace with something better, eventually, please
+        # very temporary enemy AI, please replace with something better, eventually, please
         # I'm working on it 'lil bro
+        # unfortunately, it's become not very temporary
         closestUnit = findClosestEnemy(i)
         if i.team != 0:
             possible_moves = points_within_distance(i.position, i.moveDist)
             random.shuffle(possible_moves)
             for j, v in enumerate(possible_moves):
                 try:
-                    if borders.getpixel(v) != teamColors[i.team]:
-                        possible_moves.insert(0, possible_moves.pop(j))
-                    if distance(i.position, closestUnit.position) < distance(possible_moves[0], closestUnit.position) and img.getpixel(possible_moves[0]) == grassColor:
+                    try:
+                        if (distance(i.position, closestUnit.position) > distance(v, closestUnit.position) 
+                            and img.getpixel(possible_moves[0]) == grassColor):
+                            possible_moves.insert(0, possible_moves.pop(j))
+                        
+                        # path = a_star_pathfinding(tuple(i.position), tuple(closestUnit.position), img, i)
+                        # if path is None or len(path) <= 1:
+                        #     print(f"No valid path for unit at {i.position} to {closestUnit.position}")
+                        #     continue
+                        # possible_moves.insert(0, list(path[1]))
+                    except AttributeError:
+                        pass
+                    if borders.getpixel(v) != teamColors[i.team] and img.getpixel(v) == grassColor and distance(i.position, closestUnit.position) > 5:
                         possible_moves.insert(0, possible_moves.pop(j))
                 except IndexError:
                     continue
@@ -112,7 +129,7 @@ def newTurn():
                             if target_unit.health <= 0:
                                 units.remove(target_unit)
                     else:
-                        i.position = list(move)
+                        i.move(list(move), img)
                         if borders.getpixel(move) == white or borders.getpixel(move) in teamColors:
                             borders.putpixel((move), teamColors[i.team])
                     i.movedThisTurn = True
@@ -234,9 +251,14 @@ while running:
     #             if cursorPos == u.position and u.movedThisTurn == False and u.carried == False and u.team == 0:
     #                 selected = i
     #     if isinstance(units[selected], ship):
+    
+    if leftMouseDown:
+        cursorPosDelta = [cursorPosDown[0] - cursorPosSS[0], cursorPosDown[1] - cursorPosSS[1]]
+        camPos[0] += cursorPosDelta[0]
+        camPos[1] += cursorPosDelta[1]
 
-            
     if rightMouseDown and selected >= 0:
+        
         if (abs(units[selected].position[0] - cursorPos[0]) <= units[selected].moveDist 
             and abs(units[selected].position[1] - cursorPos[1]) <= units[selected].moveDist
             and units[selected].position != cursorPos
@@ -254,7 +276,7 @@ while running:
                 #     target_unit.load_unit(units[selected])
                 #     units[selected].carried = True
             else:
-                units[selected].move(cursorPos)
+                units[selected].move(cursorPos, img)
                 if borders.getpixel(cursorPos) == white or borders.getpixel(cursorPos) in teamColors:
                     borders.putpixel(cursorPos, teamColors[units[selected].team])
             try:
@@ -267,14 +289,17 @@ while running:
     # move the camera
     pressed = pygame.key.get_pressed()
     moveSpeed = 5 if pressed[pygame.K_LSHIFT] else 1
-    if pressed[pygame.K_w] and camPos[1] < 0:
+    if pressed[pygame.K_w]:
        camPos[1] += moveSpeed
-    if pressed[pygame.K_s] and camPos[1] > -(img.height * 20)+500:
+    if pressed[pygame.K_s]:
        camPos[1] -= moveSpeed
-    if pressed[pygame.K_a] and camPos[0] < 0:
+    if pressed[pygame.K_a]:
        camPos[0] += moveSpeed
-    if pressed[pygame.K_d] and camPos[0] > -(img.width * 20)+800:
+    if pressed[pygame.K_d]:
        camPos[0] -= moveSpeed
+    
+    camPos[0] = max(min(camPos[0], 0), -(img.width * 20) + 800)
+    camPos[1] = max(min(camPos[1], 0), -(img.height * 20) + 500)
     
     screen.blit(turnButton, (screen.get_width()-39, screen.get_height()-39))
 
@@ -299,6 +324,7 @@ while running:
             # 4 - scroll up
             # 5 - scroll down
             if event.button == 1:
+                cursorPosDown = cursorPosSS
                 for i, u in enumerate(units):
                     if cursorPos == u.position and u.movedThisTurn == False and u.carried == False and u.team == 0:
                         selected = i
@@ -359,6 +385,7 @@ while running:
                 updateTerrainTexture()
             if event.key == pygame.K_r:
                 genWorld()
+                updateTerrainTexture()
             if event.key == pygame.K_t:
                 for i in units:
                     del i

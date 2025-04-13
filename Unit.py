@@ -17,13 +17,21 @@ class Unit:
     def __init__(self, position, team = 0):
         self.position = position
         self.team = team
-        colorImage = self.image.copy()
-        colorImage.fill(teamColors[team], special_flags=pygame.BLEND_ADD)
-        self.image = colorImage
+        colorUnit = self.image.copy()
+        colorUnit.fill(teamColors[team], special_flags=pygame.BLEND_ADD)
+        self.image = colorUnit
         mask = pygame.mask.from_surface(self.image)
         outline = mask.convolve(pygame.mask.Mask((3, 3), fill=True)).to_surface(setcolor=(0, 0, 0), unsetcolor=self.image.get_colorkey())
         outline.blit(self.image, (1, 1))
-        self.image = outline
+        self.unitImg = outline.copy()
+        self.image = self.unitImg
+
+        colorShip = ship.copy()
+        colorShip.fill(teamColors[team], special_flags=pygame.BLEND_ADD)
+        mask = pygame.mask.from_surface(colorShip)
+        outline = mask.convolve(pygame.mask.Mask((3, 3), fill=True)).to_surface(setcolor=(0, 0, 0), unsetcolor=self.image.get_colorkey())
+        outline.blit(colorShip, (1, 1))
+        self.shipImg = outline.copy()
 
     def __str__(self):
         return f"{str(self.position)}, {self.team}"
@@ -31,11 +39,15 @@ class Unit:
     def __repr__(self):
         return f"{str(self.position)}, {self.team}"
 
-    def move(self, position):
+    def move(self, position, map):
         self.position = position
+        if map.getpixel(position) == waterColor:
+            self.image = self.shipImg
+        else:
+            self.image = self.unitImg
     
     def isTileValid(self, map, position):
-        return map.getpixel(position) == grassColor
+        return map.getpixel(position) in self.validTiles
 
     def is_path_valid(self, target_pos, img):
         x0, y0 = self.position
