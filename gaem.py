@@ -18,7 +18,7 @@ cursorPosSS = [0, 0] # [0] is x and [1] is y
 cursorPos = [0, 0] # same ^
 camPos = [0, 0] # in pixel space
 units = []
-turnNum = 1
+turnNum = 0
 showMinimap = False
 
 selectedTeam = 0 # ! temporary variable, replace with GUI eventually, please
@@ -70,20 +70,34 @@ def addNewUnit(): # ! another very temporary thing, replace with GUI eventually,
             except IndexError:
                 continue
 
+def findClosestEnemy(ai_unit):
+    enemies = [u for u in units if u.team != ai_unit.team]
+    if not enemies:
+        return None
+    return min(enemies, key=lambda e: abs(ai_unit.position[0] - e.position[0]) + abs(ai_unit.position[1] - e.position[1]))
+
+def findClosestEnemyFromPos(team, position):
+    enemies = [u for u in units if u.team != team]
+    if not enemies:
+        return None
+    return min(enemies, key=lambda e: abs(position[0] - e.position[0]) + abs(position[1] - e.position[1]))
+
 def newTurn():
     global turnNum
     addNewUnit() 
     for i in units:
         # ! very temporary enemy AI, please replace with something better, eventually, please
         # I'm working on it 'lil bro
+        closestUnit = findClosestEnemy(i)
         if i.team != 0:
             possible_moves = points_within_distance(i.position, i.moveDist)
             random.shuffle(possible_moves)
             for j, v in enumerate(possible_moves):
                 try:
                     if borders.getpixel(v) != teamColors[i.team]:
-                        possible_moves.pop(j)
-                        possible_moves.insert(0, v)
+                        possible_moves.insert(0, possible_moves.pop(j))
+                    if distance(i.position, closestUnit.position) < distance(possible_moves[0], closestUnit.position) and img.getpixel(possible_moves[0]) == grassColor:
+                        possible_moves.insert(0, possible_moves.pop(j))
                 except IndexError:
                     continue
             for move in possible_moves:
@@ -107,6 +121,22 @@ def newTurn():
             i.movedThisTurn = False if i.team == 0 else True
     turnNum += 1
     updateWorldTexture()
+
+# some smarter AI stuff, doesn't work yet
+
+# def newTurn():
+#     global turnNum
+#     addNewUnit()
+#     for ai_unit in units:
+#         if ai_unit.team != 0:  # AI-controlled unit
+#             target = findClosestEnemy(ai_unit)
+#             if target:
+#                 path = a_star_pathfinding(ai_unit.position, target.position, img)
+#                 if path and len(path) > 1:  # Move one step along the path
+#                     ai_unit.position = path[1]
+#                     ai_unit.movedThisTurn = True
+#     turnNum += 1
+#     updateWorldTexture()
 
 def updateTerrainTexture():
     terrainTexture.fill((0, 0, 0))
@@ -208,7 +238,8 @@ while running:
             
     if rightMouseDown and selected >= 0:
         if (abs(units[selected].position[0] - cursorPos[0]) <= units[selected].moveDist 
-            and abs(units[selected].position[1] - cursorPos[1]) <= units[selected].moveDist 
+            and abs(units[selected].position[1] - cursorPos[1]) <= units[selected].moveDist
+            and units[selected].position != cursorPos
             and units[selected].is_path_valid(cursorPos, img)):
             if any(u.position == cursorPos for u in units):
                 target_unit = next((u for u in units if u.position == cursorPos), None)
@@ -306,7 +337,7 @@ while running:
             if event.key == pygame.K_0:
                 selectedTeam = 9 
             if event.key == pygame.K_z:
-                units.append(Unit([cursorPos[0], cursorPos[1]], selectedTeam))
+                units.append(Unit(cursorPos, selectedTeam))
             if event.key == pygame.K_x:
                 units.append(Ship([cursorPos[0], cursorPos[1]], selectedTeam))
             if event.key == pygame.K_c:
@@ -317,12 +348,15 @@ while running:
             if event.key == pygame.K_v:
                 img.putpixel(cursorPos, grassColor)
                 borders.putpixel(cursorPos, white)
+                updateTerrainTexture()
             if event.key == pygame.K_b:
                 img.putpixel(cursorPos, waterColor)
                 borders.putpixel(cursorPos, black)
+                updateTerrainTexture()
             if event.key == pygame.K_n:
                 img.putpixel(cursorPos, mountainColor)
                 borders.putpixel(cursorPos, (180, 180, 180))
+                updateTerrainTexture()
             if event.key == pygame.K_r:
                 genWorld()
             if event.key == pygame.K_t:
